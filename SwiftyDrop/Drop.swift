@@ -12,6 +12,7 @@ public protocol DropStatable {
     var blurEffect: UIBlurEffect? { get }
     var font: UIFont? { get }
     var textColor: UIColor? { get }
+    var textMargin:CGFloat { get }
 }
 
 public enum DropState: DropStatable {
@@ -47,6 +48,12 @@ public enum DropState: DropStatable {
         default: return nil
         }
     }
+    
+    public var textMargin:CGFloat {
+        switch self {
+        default: return 0.0
+        }
+    }
 }
 
 public typealias DropAction = () -> Void
@@ -57,7 +64,10 @@ public final class Drop: UIView {
     private var statusLabel: UILabel!
     private let statusTopMargin: CGFloat = 10.0
     private let statusBottomMargin: CGFloat = 10.0
-    private var minimumHeight: CGFloat { return UIApplication.sharedApplication().statusBarFrame.height + 44.0 }
+    private let statusBarMargin: CGFloat = 4.0
+    private var statusBarHeight: CGFloat { return UIApplication.sharedApplication().statusBarFrame.height }
+    private var statusBarHalfHeight: CGFloat { return statusBarHeight / 2 }
+    private var minimumHeight: CGFloat { return statusBarHeight + 44.0 }
     private var topConstraint: NSLayoutConstraint?
     private var heightConstraint: NSLayoutConstraint?
     
@@ -65,9 +75,9 @@ public final class Drop: UIView {
     
     private var upTimer: NSTimer?
     private var startTop: CGFloat?
-
+    
     private var action: DropAction?
-
+    
     convenience init(duration: Double, action: DropAction?) {
         self.init(frame: CGRect.zero)
         self.duration = duration
@@ -139,24 +149,24 @@ extension Drop {
     public class func down(status: String, state: DropState = .Default, duration: Double = Drop.PRESET_DURATION, action: DropAction? = nil) {
         show(status, state: state, duration: duration, action: action)
     }
-
+    
     public class func down<T: DropStatable>(status: String, state: T, duration: Double = Drop.PRESET_DURATION, action: DropAction? = nil) {
         show(status, state: state, duration: duration, action: action)
     }
-
+    
     private class func show(status: String, state: DropStatable, duration: Double, action: DropAction?) {
         self.upAll()
         let drop = Drop(duration: duration, action: action)
         UIApplication.sharedApplication().keyWindow?.addSubview(drop)
         guard let window = drop.window else { return }
-
+        
         let heightConstraint = NSLayoutConstraint(item: drop, attribute: .Height, relatedBy: .Equal, toItem: nil, attribute: .Height, multiplier: 1.0, constant: 100.0)
         drop.addConstraint(heightConstraint)
         drop.heightConstraint = heightConstraint
-
+        
         let topConstraint = NSLayoutConstraint(item: drop, attribute: .Top, relatedBy: .Equal, toItem: window, attribute: .Top, multiplier: 1.0, constant: -heightConstraint.constant)
         drop.topConstraint = topConstraint
-
+        
         window.addConstraints(
             [
                 topConstraint,
@@ -164,10 +174,10 @@ extension Drop {
                 NSLayoutConstraint(item: drop, attribute: .Right, relatedBy: .Equal, toItem: window, attribute: .Right, multiplier: 1.0,constant: 0.0)
             ]
         )
-
+        
         drop.setup(status, state: state)
         drop.updateHeight()
-
+        
         topConstraint.constant = 0.0
         UIView.animateWithDuration(
             NSTimeInterval(0.25),
@@ -263,9 +273,11 @@ extension Drop {
         labelParentView.addConstraints(
             [
                 NSLayoutConstraint(item: statusLabel, attribute: .CenterX, relatedBy: .Equal, toItem: labelParentView, attribute: .CenterX, multiplier: 1, constant: 0),
-                NSLayoutConstraint(item: statusLabel, attribute: .CenterY, relatedBy: .Equal, toItem: labelParentView, attribute: .CenterY, multiplier: 1, constant: 0)
+                NSLayoutConstraint(item: statusLabel, attribute: .CenterY, relatedBy: .Equal, toItem: labelParentView, attribute: .CenterY, multiplier: 1, constant: statusBarHalfHeight - statusBarMargin),
+                NSLayoutConstraint(item: statusLabel, attribute: .Leading, relatedBy: .Equal, toItem: labelParentView, attribute: .Leading, multiplier: 1, constant: state.textMargin),
+                NSLayoutConstraint(item: statusLabel, attribute: .Trailing, relatedBy: .Equal, toItem: labelParentView, attribute: .Trailing, multiplier: 1, constant: -state.textMargin)
             ]
-            )
+        )
         self.statusLabel = statusLabel
         
         self.layoutIfNeeded()
